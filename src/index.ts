@@ -7,6 +7,7 @@ import { connectToDatabase } from "./db";
 import { Db, Collection } from "@datastax/astra-db-ts";
 import uploadRouter from './routes/upload';
 import queryRouter from './routes/query';
+import loadRouter from './routes/loadToAi';
 
 
 
@@ -20,6 +21,7 @@ app.use(express.json())
 
 app.use("/api/v1/upload" , uploadRouter )
 app.use("/api/v1/search" , queryRouter )
+app.use("/api/v1/load" , loadRouter)
 
 
 const main = async ()=>{

@@ -1,11 +1,13 @@
 import express, { Request, Response } from "express";
+import multer from "multer";
 import fs from "fs";
 import csvParser from "csv-parser";
 import { Collection, Db } from "@datastax/astra-db-ts";
 import { connectToDatabase } from "../db";
-
+import path from "path";
 
 const uploadRouter = express.Router();
+const upload = multer({ dest: "uploads/" }); // Configure Multer to save files to 'uploads/' directory
 
 interface Post {
   title: string;
@@ -16,16 +18,14 @@ interface Post {
 
 async function getOrCreateCollection(
   database: Db,
-  collectionName: string,
+  collectionName: string
 ): Promise<Collection<Post>> {
   try {
-
     const collection = await database.collection<Post>(collectionName);
     console.log(`Using existing collection ${collection.keyspace}.${collection.collectionName}`);
     return collection;
   } catch (error: any) {
     if (error.message.includes("not found")) {
-
       console.log(`Collection ${collectionName} does not exist. Creating it...`);
       const newCollection = await database.createCollection<Post>(collectionName, {
         vector: {
@@ -35,64 +35,13 @@ async function getOrCreateCollection(
           },
         },
       });
-      console.log(
-        `Created collection ${newCollection.keyspace}.${newCollection.collectionName}`
-      );
+      console.log(`Created collection ${newCollection.keyspace}.${newCollection.collectionName}`);
       return newCollection;
     } else {
       throw new Error(`Error retrieving or creating collection: ${error.message}`);
     }
   }
 }
-
-uploadRouter.post("/file", async (req: Request, res: Response): Promise<any> => {
-  const { filePath } = req.body;
-  const  fileType  = "csv";
-  const database = connectToDatabase()
-  const collection = await getOrCreateCollection(database, "PostsTesting");
-
-  if (!filePath || !fileType || !collection) {
-    return res.status(400).send("Missing required fields in request body.");
-  }
-
-  try {
-    if (fileType === "json") {
-      await processJsonFile(collection, filePath, (data) => {
-        return `done`
-      });
-    } else if (fileType === "csv") {
-      await processCsvFile(collection, filePath, (data) => {
-        return `done`
-      });
-    } else {
-      return res.status(400).send("Unsupported file type. Please upload JSON or CSV.");
-    }
-
-    res.status(200).send("File uploaded and data inserted successfully.");
-  } catch (error) {
-    console.error("Error processing file:", error);
-    res.status(500).send("An error occurred while uploading the file.");
-  }
-});
-
-
-async function processJsonFile(
-  collection: Collection<Post>,
-  filePath: string,
-  embeddingStringCreator: (data: Record<string, any>) => string
-): Promise<void> {
-  const rawData = fs.readFileSync(filePath, "utf8");
-  const jsonData = JSON.parse(rawData);
-
-  const documents: Post[] = jsonData.map((data: any) => ({
-    ...data,
-    $vectorize: embeddingStringCreator(data),
-  }));
-
-  const inserted = await collection.insertMany(documents);
-  console.log(`Inserted ${inserted.insertedCount} items.`);
-}
-
 
 async function processCsvFile(
   collection: Collection<Post>,
@@ -117,5 +66,25 @@ async function processCsvFile(
   const inserted = await collection.insertMany(documents);
   console.log(`Inserted ${inserted.insertedCount} items.`);
 }
+
+uploadRouter.post("/file", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
+  if (!req.file) {
+    res.status(400).send("No file uploaded.");
+    return;
+  }
+  
+  const filePath = path.resolve(req.file.path);
+
+  try {
+    const database = connectToDatabase();
+    const collection = await getOrCreateCollection(database, "post");
+
+    await processCsvFile(collection, filePath, (data) => "done");
+    res.status(200).send("File processed successfully.");
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).send(`Error processing file: ${error.message}`);
+  }
+});
 
 export default uploadRouter;
