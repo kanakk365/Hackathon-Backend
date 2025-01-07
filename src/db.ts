@@ -4,10 +4,14 @@ import dotenv from "dotenv";
 
 dotenv.config()
 
+let dbInstance :any;
 
 export function connectToDatabase(): Db {
-  const { ASTRA_DB_API_ENDPOINT: endpoint, ASTRA_DB_APPLICATION_TOKEN: token } =
-    process.env;
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  const { ASTRA_DB_API_ENDPOINT: endpoint, ASTRA_DB_APPLICATION_TOKEN: token } = process.env;
 
   if (!token || !endpoint) {
     throw new Error(
@@ -15,17 +19,14 @@ export function connectToDatabase(): Db {
     );
   }
 
-
   const client = new DataAPIClient(token);
+  dbInstance = client.db(endpoint);
 
+  console.log(`Connected to database ${dbInstance.id}`);
 
-  const database = client.db(endpoint);
-
-  console.log(`Connected to database ${database.id}`);
-
-
-  return database;
+  return dbInstance;
 }
+
 
 export interface Post extends VectorizeDoc {
   post_type: string;

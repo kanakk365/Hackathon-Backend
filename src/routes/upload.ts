@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import fs from "fs";
 import csvParser from "csv-parser";
-import {  Collection } from "@datastax/astra-db-ts";
+import { Collection, Db } from "@datastax/astra-db-ts";
+import { connectToDatabase } from "../db";
 
 
 const uploadRouter = express.Router();
@@ -13,19 +14,56 @@ interface Post {
   $vectorize?: string;
 }
 
+async function getOrCreateCollection(
+  database: Db,
+  collectionName: string,
+): Promise<Collection<Post>> {
+  try {
 
-uploadRouter.post("/", async (req: Request, res: Response) : Promise<any> => {
-  const { filePath, fileType, embeddingStringCreator, collection } = req.body;
+    const collection = await database.collection<Post>(collectionName);
+    console.log(`Using existing collection ${collection.keyspace}.${collection.collectionName}`);
+    return collection;
+  } catch (error: any) {
+    if (error.message.includes("not found")) {
 
-  if (!filePath || !fileType || !embeddingStringCreator || !collection) {
+      console.log(`Collection ${collectionName} does not exist. Creating it...`);
+      const newCollection = await database.createCollection<Post>(collectionName, {
+        vector: {
+          service: {
+            provider: "nvidia",
+            modelName: "NV-Embed-QA",
+          },
+        },
+      });
+      console.log(
+        `Created collection ${newCollection.keyspace}.${newCollection.collectionName}`
+      );
+      return newCollection;
+    } else {
+      throw new Error(`Error retrieving or creating collection: ${error.message}`);
+    }
+  }
+}
+
+uploadRouter.post("/file", async (req: Request, res: Response): Promise<any> => {
+  const { filePath } = req.body;
+  const  fileType  = "csv";
+  const database = connectToDatabase()
+  const collection = await getOrCreateCollection(database, "PostsTesting");
+
+  if (!filePath || !fileType || !collection) {
     return res.status(400).send("Missing required fields in request body.");
   }
 
   try {
     if (fileType === "json") {
-      await processJsonFile(collection, filePath, embeddingStringCreator);
+      await processJsonFile(collection, filePath, (data) => {
+        return `done`
+      });
     } else if (fileType === "csv") {
-      await processCsvFile(collection, filePath, embeddingStringCreator);
+      await processCsvFile(collection, filePath, (data) => {
+        return `done`
+      });
     } else {
       return res.status(400).send("Unsupported file type. Please upload JSON or CSV.");
     }
