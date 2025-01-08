@@ -31,12 +31,12 @@ loadRouter.post("/ai", async (req: Request, res: Response): Promise<any> => {
    
     async function initiateFlowRun(value: any): Promise<any> {
       const url =
-        "https://api.langflow.astra.datastax.com/lf/ccf6615b-7615-419c-8f3c-d4d14fe37c89/api/v1/run/583f96d7-37df-4b76-9dd7-e4d367394dd5?stream=false";
+        "https://api.langflow.astra.datastax.com/lf/ccf6615b-7615-419c-8f3c-d4d14fe37c89/api/v1/run/b85ae7f4-4897-4669-8708-9c4e7b56192c?stream=false";
   
       const headers = {
         "Content-Type": "application/json",
         Authorization:
-          "Bearer AstraCS:ivwdBeNJYhUJiPPeTSaXQwPW:5b395ce3dcf4eb6a563d36736c98519c54f58b63daf1bd7cbc042c6a25312794",
+          "Bearer AstraCS:ANqtFSyLsgeRgdSmmEueoJiM:c652af616bbfdcd6adad6d3f1afbe3c5f4feaefcc2eeada6367fd974fa8f4c6b",
       };
   
       const body = {
@@ -87,7 +87,7 @@ loadRouter.post("/ai", async (req: Request, res: Response): Promise<any> => {
         return res.status(500).send("Failed to process query through Langflow API.");
       }
   
-      return res.status(200).json({ message: "Data uploaded " });
+      return res.status(200).json({ message: result });
     } catch (error) {
       console.error("Error in query route:", error);
       return res.status(500).send("An error occurred while processing the query.");
