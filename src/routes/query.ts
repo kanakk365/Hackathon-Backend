@@ -1,10 +1,32 @@
 import express, { Request, Response } from "express";
+import { connectToDatabase } from "../db";
 
 const queryRouter = express.Router();
 
+const run = async ()=> {
+  const database = connectToDatabase();
+  const collection = database.collection("post");
+
+  const allPostsCursor = await collection.find({});
+  const allPosts = await allPostsCursor.toArray();
+  // console.log(allPostsCursor)
+  // console.log(allPosts)
+  return { allPosts}
+  
+};
+
 
 queryRouter.post("/query", async (req: Request, res: Response): Promise<any> => {
+  console.log("hello")
+  console.log(req.body)
   const { search } = req.body;
+  console.log(search)
+  const data= await run()
+
+  const final={
+    databaseData: data,
+    question:search
+  }
 
 
   if (!search || typeof search !== "string") {
@@ -14,12 +36,12 @@ queryRouter.post("/query", async (req: Request, res: Response): Promise<any> => 
  
   async function initiateFlowRun(value: string): Promise<string | null> {
     const url =
-      "https://api.langflow.astra.datastax.com/lf/ccf6615b-7615-419c-8f3c-d4d14fe37c89/api/v1/run/b85ae7f4-4897-4669-8708-9c4e7b56192c?stream=false";
+      "https://api.langflow.astra.datastax.com/lf/ccf6615b-7615-419c-8f3c-d4d14fe37c89/api/v1/run/bf26d86b-78aa-40c6-ad28-b3742d2ad3a4?stream=false";
 
     const headers = {
       "Content-Type": "application/json",
       Authorization:
-        "Bearer AstraCS:NSgCCIlMzOlrfYDiAZRBJZLf:bee00116c632e58fcffe30515bd8272ef72ea59ad34d8ec8c3abdf4dde09b736",
+        "Bearer AstraCS:auLJmThoRPnNawNzRfsHOWWH:9caafe92577c70446127fbd4a2bd1156cd4a0a3a09a3c19781f6344fefd86144",
     };
 
     const body = {
@@ -61,9 +83,10 @@ queryRouter.post("/query", async (req: Request, res: Response): Promise<any> => 
     }
   }
 
+  const finalV2= JSON.stringify(final)
 
   try {
-    const result = await initiateFlowRun(search);
+    const result = await initiateFlowRun(finalV2);
 
     if (!result) {
       return res.status(500).send("Failed to process query through Langflow API.");
