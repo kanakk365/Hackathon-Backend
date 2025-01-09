@@ -41,7 +41,7 @@ queryRouter.post("/query", async (req: Request, res: Response): Promise<any> => 
     const headers = {
       "Content-Type": "application/json",
       Authorization:
-        "Bearer AstraCS:auLJmThoRPnNawNzRfsHOWWH:9caafe92577c70446127fbd4a2bd1156cd4a0a3a09a3c19781f6344fefd86144",
+        "Bearer AstraCS:eWWntZAgZQxOqcKHCPTQzUZg:5a4a4d094ddd8d54b06f83e1745acb35e0fb6bd0989bc1a1c761ac8fe8335bfd",
     };
 
     const body = {
